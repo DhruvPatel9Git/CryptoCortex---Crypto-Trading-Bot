@@ -1,8 +1,8 @@
 /* CONTAINER THEMES */
 .pageContainer {
   position: fixed;
-  top: 70px;
-  left: 0;
+  top: 65px;
+  left: 15px;
   right: 0;
   bottom: 0;
   display: flex;
