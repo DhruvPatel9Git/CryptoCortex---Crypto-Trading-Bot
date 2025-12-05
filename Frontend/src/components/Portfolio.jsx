@@ -8,7 +8,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 import styles from "../styles/Portfolio.module.css";
 
@@ -25,6 +25,7 @@ const Portfolio = () => {
   const [portfolio, setPortfolio] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const { theme } = useTheme();
 
@@ -33,7 +34,10 @@ const Portfolio = () => {
 
   useEffect(() => {
     if (!userId || !token) {
-      navigate("/login");
+      navigate("/login", {
+        replace: true,
+        state: { from: location.pathname || "/" },
+      });
       return;
     }
 
@@ -51,7 +55,10 @@ const Portfolio = () => {
       } catch (error) {
         console.error("Error fetching portfolio:", error);
         if (error.response?.status === 401 || error.response?.status === 403) {
-          navigate("/login");
+          navigate("/login", {
+            replace: true,
+            state: { from: location.pathname || "/" },
+          });
         }
       } finally {
         setLoading(false);
@@ -59,7 +66,7 @@ const Portfolio = () => {
     };
 
     fetchPortfolio();
-  }, [userId, token, navigate]);
+  }, [userId, token, navigate, location.pathname]);
 
   const chartData = portfolio.map((item) => ({
     name: item.symbol,

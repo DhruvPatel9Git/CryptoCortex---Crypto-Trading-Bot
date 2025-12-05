@@ -26,21 +26,24 @@ VALID_INTERVALS = {
 
 @router.post("/fetch_historical_candles")
 async def trigger_candle_fetch(days_back: int = 30, interval: str = "1d", current_user: dict = Depends(get_current_user)):
-    """
-    Trigger fetching of historical candle data for all symbols from Binance API.
-    """
+    """Trigger fetching of historical candle data for all symbols from Binance API.
+    Returns 400 for invalid interval, 500 for unexpected errors."""
+    if interval not in VALID_INTERVALS:
+        raise HTTPException(status_code=400, detail="Invalid interval. Use one of: " + ", ".join(VALID_INTERVALS.keys()))
     try:
-        if interval not in VALID_INTERVALS:
-            raise HTTPException(status_code=400, detail="Invalid interval. Use one of: " + ", ".join(VALID_INTERVALS.keys()))
-
         await fetch_historical_data(interval=VALID_INTERVALS[interval], days_back=days_back)
         return {"message": f"Historical candle data fetched for last {days_back} days using {interval} interval."}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch data: {str(e)}")
 
 @router.get("/candles/{symbol}")
 async def get_ohlc_data(symbol: str, days_back: int = Query(30, ge=1)):
     symbol = symbol.upper()
+    # FastAPI's dependency injection wraps defaults in Query; when calling directly in tests, coerce.
+    if not isinstance(days_back, int):
+        days_back = int(getattr(days_back, "default", 30))
     end_time = datetime.now(timezone.utc)
     start_time = end_time - timedelta(days=days_back)
 

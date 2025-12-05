@@ -115,3 +115,21 @@ async def settle_filled_limit_orders():
             # Log the full traceback for debugging
             import traceback
             traceback.print_exc()
+
+
+            # Celery task wrapper for running this periodic job under Celery
+            try:
+                from celery_app import app
+
+                @app.task(name="fetch_binance.background_jobs.settle_filled_limit_orders_task", bind=True, max_retries=3, default_retry_delay=10)
+                def settle_filled_limit_orders_task(self):
+                    """Celery wrapper that runs the async settle_filled_limit_orders function."""
+                    try:
+                        import asyncio as _asyncio
+                        return _asyncio.run(settle_filled_limit_orders())
+                    except Exception as exc:
+                        # Let Celery handle retries
+                        raise self.retry(exc=exc)
+            except Exception:
+                # If celery_app isn't available (e.g., import-time during some tests), skip wrapper creation
+                pass

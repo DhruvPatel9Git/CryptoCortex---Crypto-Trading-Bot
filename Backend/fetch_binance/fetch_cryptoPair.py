@@ -3,22 +3,32 @@ from decimal import Decimal
 from datetime import datetime, timezone
 from bson.decimal128 import Decimal128
 from models import CryptoPair
+import asyncio
+
 
 def to_decimal128(val):
     if val is None:
         return None
     if isinstance(val, Decimal128):
         return val
-    return Decimal128(str(val)) 
+    return Decimal128(str(val))
+
 
 binance_client = Client()
 
+
 async def fetch_and_store_binance_symbols():
-    exchange_info = binance_client.get_exchange_info()
+    """Fetch exchange symbols from Binance and insert/update `CryptoPair` documents.
+
+    Binance client calls are blocking; use `asyncio.to_thread` so we don't block the
+    event loop during startup.
+    """
+    # fetch exchange info in thread
+    exchange_info = await asyncio.to_thread(binance_client.get_exchange_info)
     symbols = exchange_info.get("symbols", [])
 
     for s in symbols:
-        if s["status"] != "TRADING" or not s["isSpotTradingAllowed"]:
+        if s["status"] != "TRADING" or not s.get("isSpotTradingAllowed", False):
             continue
 
         symbol = s["symbol"]
@@ -29,8 +39,9 @@ async def fetch_and_store_binance_symbols():
         if not symbol.endswith("USDT"):
             continue
 
-        price_data = binance_client.get_symbol_ticker(symbol=symbol)
-        price = to_decimal128(price_data["price"]) if "price" in price_data else None
+        # fetch ticker in thread
+        price_data = await asyncio.to_thread(binance_client.get_symbol_ticker, symbol=symbol)
+        price = to_decimal128(price_data.get("price")) if "price" in price_data else None
         now = datetime.now(timezone.utc)
 
         filters = {f["filterType"]: f for f in s.get("filters", [])}
@@ -63,6 +74,6 @@ async def fetch_and_store_binance_symbols():
                 min_qty=min_qty,
                 step_size=step_size,
                 tick_size=tick_size,
-                created_at=now
+                created_at=now,
             )
             await doc.insert()

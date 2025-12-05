@@ -1,6 +1,12 @@
 from fastapi import FastAPI
 from db import lifespan 
-from routes import cryptoPair, ohlc, websocket_routes, trading, current_balance, portfolio, auth_routes, cart, credits, qa_chatbot
+
+# Import routes using package-relative imports when running as `Backend.main`,
+# but fall back to top-level imports when modules are executed directly
+try:
+    from .routes import cryptoPair, ohlc, websocket_routes, trading, current_balance, portfolio, auth_routes, cart, credits, qa_chatbot
+except Exception:
+    from routes import cryptoPair, ohlc, websocket_routes, trading, current_balance, portfolio, auth_routes, cart, credits, qa_chatbot
 from fastapi.middleware.cors import CORSMiddleware
 
 

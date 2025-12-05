@@ -1,10 +1,15 @@
-import dramatiq
 import logging
 from decimal import Decimal
 from datetime import datetime, timezone
 import asyncio
+import threading
+from concurrent.futures import TimeoutError as FutureTimeoutError
 
-from broker import redis_broker
+try:
+    from .celery_app import app
+except Exception:
+    # Fallback when module is executed without package context
+    from celery_app import app
 from models import (
     Order, Transaction, CreditsHistory,
     TransactionTypeEnum, CreditReasonEnum
@@ -16,6 +21,7 @@ from services.portfolio import (
     get_user_by_id
 )
 from binance_config import client
+from binance.exceptions import BinanceAPIException
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -25,17 +31,43 @@ logger = logging.getLogger(__name__)
 TRADING_FEE_RATE = Decimal("0.001")
 
 
-@dramatiq.actor
-def process_trade_task(order_data: dict):
+_worker_loop = None
+_worker_loop_thread = None
+
+def _ensure_worker_loop():
+    """Ensure a persistent event loop running in a background thread for this worker process.
+
+    Using a persistent loop avoids creating and closing event loops per task, which can
+    leave Motor/Beanie tied to a closed loop and cause 'Event loop is closed' errors.
     """
-    Dramatiq actor entrypoint.
-    Runs asyncio worker in sync context.
+    global _worker_loop, _worker_loop_thread
+    if _worker_loop is None:
+        _worker_loop = asyncio.new_event_loop()
+        _worker_loop_thread = threading.Thread(target=_worker_loop.run_forever, daemon=True)
+        _worker_loop_thread.start()
+    return _worker_loop
+
+
+@app.task(name="process_trade_task", bind=True, max_retries=3, default_retry_delay=10)
+def process_trade_task(self, order_data: dict):
+    """Celery task wrapper that schedules the async worker on a persistent event loop.
+
+    This schedules `worker_main` on a background event loop (thread) and waits for the
+    result using `run_coroutine_threadsafe`. This keeps Motor/Beanie initializations bound
+    to a long-lived loop and avoids `RuntimeError: Event loop is closed` on subsequent tasks.
     """
     try:
         logger.info(f"🎯 Received trade task: {order_data}")
-        asyncio.run(worker_main(order_data))
-    except Exception as e:
-        logger.exception(f"❌ Dramatiq trade task top-level error: {e}")
+        loop = _ensure_worker_loop()
+        future = asyncio.run_coroutine_threadsafe(worker_main(order_data), loop)
+        # Wait for completion; allow a generous timeout in case of network delays
+        return future.result(timeout=300)
+    except FutureTimeoutError as exc:
+        logger.exception(f"❌ Celery trade task timeout: {exc}")
+        raise self.retry(exc=exc)
+    except Exception as exc:
+        logger.exception(f"❌ Celery trade task top-level error: {exc}")
+        raise self.retry(exc=exc)
 
 
 async def worker_main(order_data: dict):
@@ -91,13 +123,41 @@ async def worker_main(order_data: dict):
         logger.info(f"✅ Trade task complete for user {user_id}")
 
     except Exception as e:
-        logger.exception(f"❌ Dramatiq trade task error: {e}")
+        logger.exception(f"❌ Celery worker error: {e}")
 
 
 async def place_order_on_binance(symbol, side, order_type, quantity, price):
     """
     Handles placing the order on Binance and returns (response, fill_price).
     """
+    # Fetch symbol filters to validate minNotional and stepSize
+    try:
+        symbol_info = client.get_symbol_info(symbol)
+    except Exception:
+        symbol_info = None
+
+    min_notional = None
+    step_size = None
+    if symbol_info and "filters" in symbol_info:
+        for f in symbol_info["filters"]:
+            if f.get("filterType") in ("MIN_NOTIONAL", "NOTIONAL"):
+                # some Binance versions use MIN_NOTIONAL or NOTIONAL
+                if f.get("minNotional"):
+                    min_notional = Decimal(str(f.get("minNotional")))
+                elif f.get("notional"):
+                    min_notional = Decimal(str(f.get("notional")))
+            if f.get("filterType") == "LOT_SIZE":
+                step_size = Decimal(str(f.get("stepSize"))) if f.get("stepSize") else None
+
+    def quantize_to_step(qty, step):
+        if not step:
+            return qty
+        # round down to nearest step size
+        try:
+            return (qty // step) * step
+        except Exception:
+            return qty
+
     if order_type == "LIMIT":
         if not price:
             raise ValueError("LIMIT orders require a price")
@@ -109,36 +169,86 @@ async def place_order_on_binance(symbol, side, order_type, quantity, price):
 
         if is_fillable:
             logger.info(f"✅ LIMIT condition met (live: {live_price}, target: {price}) - placing MARKET")
+            qty_to_place = quantize_to_step(quantity, step_size)
+            # Validate min notional (quote quantity)
+            if min_notional is not None:
+                notional = qty_to_place * live_price
+                if notional < min_notional:
+                    raise ValueError(f"Order notional {notional} is below minimum {min_notional} for {symbol}")
+
             order_payload = {
                 "symbol": symbol,
                 "side": side,
                 "type": "MARKET",
-                "quantity": float(quantity)
+                "quantity": float(qty_to_place)
             }
-            resp = client.create_order(**order_payload)
+            logger.info(
+                "Placing MARKET order (LIMIT condition met): symbol=%s qty_to_place=%s step_size=%s min_notional=%s notional=%s payload=%s",
+                symbol, str(qty_to_place), str(step_size), str(min_notional), str(qty_to_place * live_price), order_payload
+            )
+            try:
+                resp = client.create_order(**order_payload)
+            except BinanceAPIException as exc:
+                logger.error(f"BinanceAPIException placing MARKET order: {exc}")
+                raise
             return resp, Decimal(resp["fills"][0]["price"])
         else:
             logger.info("⌛ LIMIT condition not met - placing LIMIT GTC")
+            qty_to_place = quantize_to_step(quantity, step_size)
+            if min_notional is not None:
+                notional = qty_to_place * Decimal(str(price))
+                if notional < min_notional:
+                    raise ValueError(f"Order notional {notional} is below minimum {min_notional} for {symbol}")
+
             order_payload = {
                 "symbol": symbol,
                 "side": side,
                 "type": "LIMIT",
                 "timeInForce": "GTC",
-                "quantity": float(quantity),
+                "quantity": float(qty_to_place),
                 "price": float(price)
             }
-            resp = client.create_order(**order_payload)
+            logger.info(
+                "Placing LIMIT order: symbol=%s qty_to_place=%s step_size=%s min_notional=%s notional=%s payload=%s",
+                symbol, str(qty_to_place), str(step_size), str(min_notional), str(qty_to_place * Decimal(str(price))), order_payload
+            )
+            try:
+                resp = client.create_order(**order_payload)
+            except BinanceAPIException as exc:
+                logger.error(f"BinanceAPIException placing LIMIT order: {exc}")
+                raise
             return resp, price
 
     else:
         logger.info("✅ MARKET order")
+        logger.info("Preparing MARKET order: quantizing to step size and validating minNotional")
+        qty_to_place = quantize_to_step(quantity, step_size)
+        # Validate min notional using a live price
+        try:
+            live_price = Decimal(client.get_symbol_ticker(symbol=symbol)["price"])
+        except Exception:
+            live_price = None
+
+        if min_notional is not None and live_price is not None:
+            notional = qty_to_place * live_price
+            if notional < min_notional:
+                raise ValueError(f"Order notional {notional} is below minimum {min_notional} for {symbol}")
+
         order_payload = {
             "symbol": symbol,
             "side": side,
             "type": "MARKET",
-            "quantity": float(quantity)
+            "quantity": float(qty_to_place)
         }
-        resp = client.create_order(**order_payload)
+        logger.info(
+            "Placing MARKET order: symbol=%s qty_to_place=%s step_size=%s min_notional=%s notional=%s payload=%s",
+            symbol, str(qty_to_place), str(step_size), str(min_notional), str((live_price * qty_to_place) if live_price is not None else None), order_payload
+        )
+        try:
+            resp = client.create_order(**order_payload)
+        except BinanceAPIException as exc:
+            logger.error(f"BinanceAPIException placing MARKET order: {exc}")
+            raise
         return resp, Decimal(resp["fills"][0]["price"])
 
 

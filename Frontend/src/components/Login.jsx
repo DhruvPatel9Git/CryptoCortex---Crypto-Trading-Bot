@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import styles from '../styles/Auth.module.css';
 
@@ -10,6 +10,8 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [msg, setMsg] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = location.state?.from || '/';
 
   const handleLogin = async () => {
     try {
@@ -25,7 +27,7 @@ const Login = () => {
       localStorage.setItem('user_id', user_id);
 
       setMsg('Logged in!');
-      navigate('/');
+      navigate(redirectTo, { replace: true });
     } catch (error) {
       if (error.response?.data?.detail) {
         setMsg(`${error.response.data.detail}`);

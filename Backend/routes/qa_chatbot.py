@@ -7,7 +7,10 @@ from chatbot.order_context_builder import is_order_history_request, get_order_hi
 from chatbot.qa_utils import question_answer
 from chatbot.symbol_extractor import extract_symbol_and_date
 from datetime import datetime, time
-from trade_tasks import process_trade_task  # ✅ import your dramatiq actor!
+try:
+    from ..trade_tasks import process_trade_task  # ✅ import your Celery task
+except Exception:
+    from trade_tasks import process_trade_task  # fallback for top-level imports
 
 router = APIRouter()
 
@@ -57,7 +60,7 @@ async def qa_main(body: dict, current_user=Depends(get_current_user)):
     trade_data = parse_trade_command(question)
     if trade_data:
         try:
-            # Build the payload for Dramatiq
+            # Build the payload for the task queue (Celery)
             task_payload = {
                 "user_id": str(current_user.id),
                 "symbol": trade_data["symbol"],
@@ -67,8 +70,12 @@ async def qa_main(body: dict, current_user=Depends(get_current_user)):
                 "price": str(trade_data["price"]) if trade_data["price"] else None
             }
 
-            # ✅ Enqueue with Dramatiq
-            process_trade_task.send(task_payload)
+            # ✅ Enqueue with task queue (support legacy `.send()` for tests)
+            enqueue_fn = getattr(process_trade_task, "send", None)
+            if callable(enqueue_fn):
+                enqueue_fn(task_payload)
+            else:
+                process_trade_task.delay(task_payload)
 
             return {
                 "question": question,
@@ -83,10 +90,17 @@ async def qa_main(body: dict, current_user=Depends(get_current_user)):
         context = await get_order_history_context(current_user)
         if not context:
             return {"error": "You have no recent orders."}
+        # context may be list[str] or a single str
+        if isinstance(context, list):
+            answer_text = "\n".join(context)
+            snippet_source = "\n".join(context)
+        else:
+            answer_text = context
+            snippet_source = context
         return {
             "question": question,
-            "answer": "\n".join(context),
-            "context_snippet": context[:500] + "..." if len(context) > 500 else context
+            "answer": answer_text,
+            "context_snippet": snippet_source[:500] + "..." if len(snippet_source) > 500 else snippet_source
         }
 
     # ✅ Else: candlestick data

@@ -1,0 +1,15 @@
+__pycache__/
+env/
+venv/
+*.pyc
+*.pyo
+*.pyd
+*.swp
+.pytest_cache/
+.venv/
+dist/
+build/
+*.egg-info/
+.DS_Store
+bert_squad_model/
+__pycache__

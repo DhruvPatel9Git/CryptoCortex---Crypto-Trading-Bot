@@ -1,0 +1,39 @@
+# Render service definition for CryptoCortex Backend
+# This defines a web service and a worker service using the Dockerfile in Backend/
+
+services:
+  - type: web
+    name: cryptocortex-backend-web
+    env: docker
+    plan: free
+    branch: main
+    dockerfilePath: Backend/Dockerfile
+    startCommand: ./Backend/startup.sh
+    envVars:
+      - key: MONGODB_URI
+        value: ""
+      - key: REDIS_URL
+        value: ""
+      - key: SECRET_KEY
+        value: ""
+      - key: ENV
+        value: "production"
+      - key: BERT_MODEL_URL
+        value: "" # optional: Hugging Face model id or archive URL
+
+  - type: worker
+    name: cryptocortex-backend-worker
+    env: docker
+    plan: free
+    branch: main
+    dockerfilePath: Backend/Dockerfile
+    startCommand: celery -A Backend.celery_app.app worker --loglevel=info --pool=solo
+    envVars:
+      - key: MONGODB_URI
+        value: ""
+      - key: REDIS_URL
+        value: ""
+      - key: SECRET_KEY
+        value: ""
+      - key: ENV
+        value: "production"
