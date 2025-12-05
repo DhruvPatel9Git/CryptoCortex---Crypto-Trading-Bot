@@ -4,7 +4,7 @@ from db import get_current_user
 import re
 from chatbot.candle_context_builder import get_candlestick_context
 from chatbot.order_context_builder import is_order_history_request, get_order_history_context
-from chatbot.qa_utils import question_answer
+from chatbot.qa_utils_safe import question_answer
 from chatbot.symbol_extractor import extract_symbol_and_date
 from datetime import datetime, time
 try:

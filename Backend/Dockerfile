@@ -12,7 +12,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy only requirements first for better caching
-COPY requirements.txt ./
+# The requirements file lives under Backend/, copy it explicitly and
+# install from it to avoid missing-file errors when building from repo root.
+COPY Backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy app

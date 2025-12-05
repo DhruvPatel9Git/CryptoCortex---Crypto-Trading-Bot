@@ -15,9 +15,9 @@ if [ -z "${BERT_MODEL_URL-}" ]; then
 fi
 
 echo "Ensuring BERT model is present in $MODEL_DIR (source: $BERT_MODEL_URL)"
-if [ ! -d "$MODEL_DIR" ] || [ -z "$(ls -A $MODEL_DIR)" ]; then
+if [ ! -d "$MODEL_DIR" ] || [ -z "$(ls -A "$MODEL_DIR")" ]; then
   echo "Model directory missing or empty — downloading model from $BERT_MODEL_URL"
-  python3 ./Backend/scripts/download_bert_model.py "$BERT_MODEL_URL" "$MODEL_DIR"
+  python ./scripts/download_bert_model.py "$BERT_MODEL_URL" "$MODEL_DIR"
 else
   echo "Model already present — skipping download"
 fi
