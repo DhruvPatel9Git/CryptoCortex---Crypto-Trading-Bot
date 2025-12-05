@@ -10,5 +10,3 @@ venv.bak/
 # Node.js dependencies
 /frontend/node_modules/
 
-# Large or unnecessary model files
-/Backend/chatbot/bert_squad_model/model.safetensors
