@@ -1,4 +1,4 @@
-from binance.client import Client
+from binance_config import client as binance_client
 from decimal import Decimal
 from datetime import datetime, timezone
 from bson.decimal128 import Decimal128
@@ -14,7 +14,6 @@ def to_decimal128(val):
     return Decimal128(str(val))
 
 
-binance_client = Client()
 
 
 async def fetch_and_store_binance_symbols():
