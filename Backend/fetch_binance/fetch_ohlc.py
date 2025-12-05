@@ -10,6 +10,16 @@ async def fetch_historical_data(interval: str = BINANCE_INTERVAL, days_back: int
     pairs = await CryptoPair.find_all().to_list()
     now = datetime.now(timezone.utc)
 
+    # Skip if Binance client not available
+    try:
+        from binance_config import client as _client
+        if not getattr(_client, "is_available", lambda: False)():
+            print("Binance client not available — skipping fetch_historical_data")
+            return
+    except Exception:
+        print("Error checking Binance client availability — skipping fetch_historical_data")
+        return
+
     for pair in pairs:
         try:
             # Get last fetched time from tracker

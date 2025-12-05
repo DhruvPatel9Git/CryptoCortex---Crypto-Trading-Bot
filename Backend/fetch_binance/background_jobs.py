@@ -15,6 +15,16 @@ def decimal128_to_decimal(value):
 async def settle_filled_limit_orders():
     print("Running limit order settlement job...")
 
+    # If Binance client is unavailable (restricted location / offline), skip this job
+    try:
+        if not getattr(client, "is_available", lambda: False)():
+            print("Binance client not available — skipping limit order settlement job")
+            return
+    except Exception:
+        # If checking availability raises, be defensive and skip
+        print("Error checking Binance client availability — skipping job")
+        return
+
     open_orders = await Order.find(Order.status == "NEW").to_list()
     print(f"Found {len(open_orders)} open orders")
 

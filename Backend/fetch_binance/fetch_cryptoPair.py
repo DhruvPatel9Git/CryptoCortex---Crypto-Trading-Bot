@@ -23,6 +23,15 @@ async def fetch_and_store_binance_symbols():
     event loop during startup.
     """
     # fetch exchange info in thread
+    # If Binance client isn't available, skip fetching symbols
+    try:
+        if not getattr(binance_client, "is_available", lambda: False)():
+            print("Binance client not available — skipping fetch_and_store_binance_symbols")
+            return
+    except Exception:
+        print("Error checking Binance client availability — skipping fetch_and_store_binance_symbols")
+        return
+
     exchange_info = await asyncio.to_thread(binance_client.get_exchange_info)
     symbols = exchange_info.get("symbols", [])
 
