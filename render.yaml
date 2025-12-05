@@ -27,7 +27,7 @@ services:
     plan: free
     branch: main
     dockerfilePath: Backend/Dockerfile
-    startCommand: celery -A Backend.celery_app.app worker --loglevel=info --pool=solo
+    startCommand: celery -A Backend.celery_app worker --loglevel=info --pool=solo
     envVars:
       - key: MONGODB_URI
         value: ""
