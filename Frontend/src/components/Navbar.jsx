@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';
-import { useTheme } from '../context/ThemeContext';
-import ThemeToggle from '../context/ThemeToggle';
-import styles from '../styles/Navbar.module.css';
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
+import { useTheme } from "../context/ThemeContext";
+import ThemeToggle from "../context/ThemeToggle";
+import styles from "../styles/Navbar.module.css";
 
 const isTokenExpired = (token) => {
   try {
@@ -15,9 +15,9 @@ const isTokenExpired = (token) => {
 };
 
 const getValidUsername = () => {
-  const token = localStorage.getItem('access_token');
+  const token = localStorage.getItem("access_token");
   if (!token || isTokenExpired(token)) return null;
-  return localStorage.getItem('username');
+  return localStorage.getItem("username");
 };
 
 const Navbar = () => {
@@ -30,8 +30,8 @@ const Navbar = () => {
     const handleStorageChange = () => {
       setUsername(getValidUsername());
     };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   useEffect(() => {
@@ -39,37 +39,52 @@ const Navbar = () => {
   }, []);
 
   const handleLogout = async () => {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem("access_token");
     try {
       if (token && !isTokenExpired(token)) {
-        await fetch(`http://localhost:8000/logout`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+        await fetch(
+          `https://cryptocortex-crypto-trading-bot-9.onrender.com/logout`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
           }
-        });
+        );
       }
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     } finally {
       localStorage.clear();
       setUsername(null);
-      navigate('/login');
+      navigate("/login");
     }
   };
 
   return (
-    <nav className={`${styles.navbar} ${theme === 'dark' ? styles.navbarDark : styles.navbarLight}`}>
+    <nav
+      className={`${styles.navbar} ${
+        theme === "dark" ? styles.navbarDark : styles.navbarLight
+      }`}
+    >
       <div className={styles.navbarLeft}>
         <Link to="/" className={styles.logoLink}>
           <h2 className={styles.logoText}>CryptoCortex</h2>
         </Link>
         <ul className={styles.navLinks}>
-          <li className={styles.navLinkItem}><Link to="/">Home</Link></li>
-          <li className={styles.navLinkItem}><Link to="/portfolio">Portfolio</Link></li>
-          <li className={styles.navLinkItem}><Link to="/trade">Buy Crypto</Link></li>
-          <li className={styles.navLinkItem}><Link to="/details">Market Dashboard</Link></li>
+          <li className={styles.navLinkItem}>
+            <Link to="/">Home</Link>
+          </li>
+          <li className={styles.navLinkItem}>
+            <Link to="/portfolio">Portfolio</Link>
+          </li>
+          <li className={styles.navLinkItem}>
+            <Link to="/trade">Buy Crypto</Link>
+          </li>
+          <li className={styles.navLinkItem}>
+            <Link to="/details">Market Dashboard</Link>
+          </li>
         </ul>
       </div>
 
@@ -77,13 +92,27 @@ const Navbar = () => {
         <ThemeToggle />
         {username ? (
           <>
-            <span className={styles.welcome}>👋 Welcome, <strong>{username}</strong></span>
-            <button className={styles.authButton} onClick={handleLogout}>Logout</button>
+            <span className={styles.welcome}>
+              👋 Welcome, <strong>{username}</strong>
+            </span>
+            <button className={styles.authButton} onClick={handleLogout}>
+              Logout
+            </button>
           </>
         ) : (
           <>
-            <button className={styles.authButton} onClick={() => navigate('/login')}>Login</button>
-            <button className={styles.authButton} onClick={() => navigate('/register')}>Register</button>
+            <button
+              className={styles.authButton}
+              onClick={() => navigate("/login")}
+            >
+              Login
+            </button>
+            <button
+              className={styles.authButton}
+              onClick={() => navigate("/register")}
+            >
+              Register
+            </button>
           </>
         )}
       </div>

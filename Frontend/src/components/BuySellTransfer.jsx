@@ -22,7 +22,7 @@ const BuySellTransferPage = () => {
   const [transferSymbol, setTransferSymbol] = useState("");
   const [transferAmount, setTransferAmount] = useState("");
 
-  const API_URL = "http://localhost:8000";
+  const API_URL = "https://cryptocortex-crypto-trading-bot-9.onrender.com";
 
   useEffect(() => {
     fetchCartFromBackend();

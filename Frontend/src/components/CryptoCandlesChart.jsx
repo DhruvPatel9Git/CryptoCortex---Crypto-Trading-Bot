@@ -22,9 +22,12 @@ const CryptoCandlesChart = ({ symbol, currentPrice, theme = "dark" }) => {
 
     const fetchCandles = async () => {
       try {
-        const res = await axios.get(`http://localhost:8000/candles/${symbol}`, {
-          params: { days_back: 120 },
-        });
+        const res = await axios.get(
+          `https://cryptocortex-crypto-trading-bot-9.onrender.com/candles/${symbol}`,
+          {
+            params: { days_back: 120 },
+          }
+        );
         const sorted = res.data.sort(
           (a, b) => new Date(a.time) - new Date(b.time)
         );
@@ -68,7 +71,7 @@ const CryptoCandlesChart = ({ symbol, currentPrice, theme = "dark" }) => {
           low: parseFloat(kline.l),
           close: parseFloat(kline.c),
           volume: parseFloat(kline.v),
-          isComplete: kline.x
+          isComplete: kline.x,
         };
 
         setLiveCandle(liveData);
@@ -88,7 +91,9 @@ const CryptoCandlesChart = ({ symbol, currentPrice, theme = "dark" }) => {
     return (
       <div
         className={`${styles.loadingContainer} ${
-          theme === "dark" ? styles.loadingContainerDark : styles.loadingContainerLight
+          theme === "dark"
+            ? styles.loadingContainerDark
+            : styles.loadingContainerLight
         }`}
       >
         <div>
@@ -150,7 +155,13 @@ const CryptoCandlesChart = ({ symbol, currentPrice, theme = "dark" }) => {
       }`}
     >
       <div className={styles.chartHeader}>
-        <h3 className={theme === "dark" ? styles.chartTitleDark : styles.chartTitleLight}>{symbol?.toUpperCase()} Chart</h3>
+        <h3
+          className={
+            theme === "dark" ? styles.chartTitleDark : styles.chartTitleLight
+          }
+        >
+          {symbol?.toUpperCase()} Chart
+        </h3>
         {currentPrice && (
           <div className={styles.currentPrice}>
             ${currentPrice.toLocaleString()}
@@ -232,7 +243,10 @@ const CryptoCandlesChart = ({ symbol, currentPrice, theme = "dark" }) => {
               gridcolor: gridColor,
               zerolinecolor: zeroLineColor,
               tickfont: { color: tickFontColor, size: 10 },
-              title: { text: "Price ($)", font: { color: fontColor, size: 12 } },
+              title: {
+                text: "Price ($)",
+                font: { color: fontColor, size: 12 },
+              },
             },
             yaxis2: {
               domain: [0, 0.25],
@@ -249,23 +263,23 @@ const CryptoCandlesChart = ({ symbol, currentPrice, theme = "dark" }) => {
               x: 0,
               y: 1.02,
               bgcolor: "rgba(0,0,0,0)",
-              font: { size: 10 }
+              font: { size: 10 },
             },
             margin: { r: 10, t: 10, b: 30, l: 50 },
             hovermode: "x unified",
             hoverlabel: {
               bgcolor: hoverBgColor,
               bordercolor: gridColor,
-              font: { color: hoverFontColor }
-            }
+              font: { color: hoverFontColor },
+            },
           }}
           useResizeHandler={true}
           style={{ width: "100%", height: "100%" }}
           config={{
             displayModeBar: true,
             displaylogo: false,
-            modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
-            responsive: true
+            modeBarButtonsToRemove: ["pan2d", "lasso2d", "select2d"],
+            responsive: true,
           }}
         />
       </div>

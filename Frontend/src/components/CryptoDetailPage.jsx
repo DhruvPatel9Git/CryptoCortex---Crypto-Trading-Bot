@@ -17,7 +17,9 @@ const CryptoDetailPage = () => {
   useEffect(() => {
     const fetchSymbols = async () => {
       try {
-        const res = await axios.get("http://localhost:8000/cryptos/all");
+        const res = await axios.get(
+          "https://cryptocortex-crypto-trading-bot-9.onrender.com/cryptos/all"
+        );
         const symbolOptions = res.data.map((s) => ({
           value: s.toLowerCase(),
           label: s.toUpperCase(),

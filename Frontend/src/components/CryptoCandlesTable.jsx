@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from 'react-router-dom';
+import { useParams } from "react-router-dom";
 import axios from "axios";
-import BackButton from '../components/BackButton';
+import BackButton from "../components/BackButton";
 import { useTheme } from "../context/ThemeContext";
 
 const CryptoCandlesTable = () => {
@@ -14,7 +14,7 @@ const CryptoCandlesTable = () => {
       const grouped = {};
       try {
         const res = await axios.get(
-          `http://localhost:8000/candles/${symbol}`,
+          `https://cryptocortex-crypto-trading-bot-9.onrender.com/candles/${symbol}`,
           {
             params: { days_back: 30 },
           }
@@ -54,9 +54,9 @@ const CryptoCandlesTable = () => {
                 border="1"
                 cellPadding="6"
                 style={{
-                  width: '90%',
+                  width: "90%",
                   height: "90%",
-                  textAlign: 'center',
+                  textAlign: "center",
                   borderColor: theme === "dark" ? "#555" : "#ccc",
                   backgroundColor: theme === "dark" ? "#1e1e1e" : "#fff",
                   color: theme === "dark" ? "#eee" : "#333",

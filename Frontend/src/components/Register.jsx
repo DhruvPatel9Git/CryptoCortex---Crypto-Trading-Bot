@@ -1,26 +1,29 @@
-import React, { useState } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import BackButton from '../components/BackButton';
-import styles from '../styles/Auth.module.css';
+import React, { useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import BackButton from "../components/BackButton";
+import styles from "../styles/Auth.module.css";
 
 const Register = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
   const handleRegister = async () => {
     try {
-      const response = await axios.post('http://localhost:8000/register', {
-        username,
-        password
-      });
+      const response = await axios.post(
+        "https://cryptocortex-crypto-trading-bot-9.onrender.com/register",
+        {
+          username,
+          password,
+        }
+      );
       setMessage(response.data.message);
 
       // Redirect on success
-      if (response.data.message?.toLowerCase().includes('success')) {
-        navigate('/login');
+      if (response.data.message?.toLowerCase().includes("success")) {
+        navigate("/login");
       }
     } catch (error) {
       console.error("Registration failed:", error);

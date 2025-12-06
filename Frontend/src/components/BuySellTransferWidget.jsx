@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import styles from "../styles/BuySellTransferWidget.module.css";
 
-const API_URL = "http://localhost:8000";
+const API_URL = "https://cryptocortex-crypto-trading-bot-9.onrender.com";
 
 export const BuySellTransferWidget = ({ symbol, theme = "dark" }) => {
   const [orderType, setOrderType] = useState("LIMIT");
@@ -196,7 +196,13 @@ export const BuySellTransferWidget = ({ symbol, theme = "dark" }) => {
             theme === "dark" ? styles.sectionDark : styles.sectionLight
           }`}
         >
-          <div className={`${theme === "dark" ? styles.sectionTitleDark : styles.sectionTitleLight}`}>
+          <div
+            className={`${
+              theme === "dark"
+                ? styles.sectionTitleDark
+                : styles.sectionTitleLight
+            }`}
+          >
             Buy {symbol?.split("USDT")[0] || "BTC"}
           </div>
           {renderForm("buy")}
@@ -207,7 +213,13 @@ export const BuySellTransferWidget = ({ symbol, theme = "dark" }) => {
             theme === "dark" ? styles.sectionDark : styles.sectionLight
           }`}
         >
-          <div className={`${theme === "dark" ? styles.sectionTitleDark : styles.sectionTitleLight}`}>
+          <div
+            className={`${
+              theme === "dark"
+                ? styles.sectionTitleDark
+                : styles.sectionTitleLight
+            }`}
+          >
             Sell {symbol?.split("USDT")[0] || "BTC"}
           </div>
           {renderForm("sell")}

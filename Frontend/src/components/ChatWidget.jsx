@@ -23,7 +23,7 @@ function ChatWidget() {
 • Sell 2 ETHUSDT at limit price 3500
 • Show my order history
 • Price of BTCUSDT on June 20
-How can I help you today?`
+How can I help you today?`,
         },
       ]);
     }
@@ -66,14 +66,17 @@ How can I help you today?`
     }
 
     try {
-      const res = await fetch("http://localhost:8000/qa", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ question: input }),
-      });
+      const res = await fetch(
+        "https://cryptocortex-crypto-trading-bot-9.onrender.com/qa",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ question: input }),
+        }
+      );
 
       if (res.status === 401) {
         setMessages([
